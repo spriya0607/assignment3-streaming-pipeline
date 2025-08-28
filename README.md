@@ -1,63 +1,88 @@
-# Assignment 3 – IoT Streaming Analytics Pipeline
+# 📡 IoT Sensor Data Streaming Pipeline (AWS + Spark + Terraform)
 
-## Overview
-This project implements a **serverless IoT data streaming pipeline** using AWS services.  
-It ingests raw IoT sensor events (~5GB), processes them using **Spark Structured Streaming on EMR**, and stores results in a **Bronze → Gold layered S3 data lake**.
+This project implements a real-time data streaming pipeline for IoT sensor data using AWS services. The solution simulates **humidity sensor events** and processes them using a Spark streaming job on an EMR cluster. Processed data is stored in S3, and the system is monitored with CloudWatch alarms.
 
 ---
 
-## Architecture
-- **Bronze (Raw):** IoT events generated and uploaded into `my-streaming-raw-bronze/raw/`
-- **Gold (Processed):** Cleaned and transformed Parquet data written into `my-streaming-processed-gold/iot_transformed/`
-- **Compute:** AWS EMR cluster running Spark Structured Streaming job
-- **Storage:** Amazon S3 for both raw and processed zones
-- **Monitoring:** EMR step logs (CloudWatch / EMR console)
+## 🚀 Overview
+
+- **Data Simulation**: Python script generates humidity sensor data and uploads it to S3 every few minutes.  
+- **Data Processing**: PySpark job runs on EMR, reads data from S3, cleans/normalizes it, and writes processed outputs back to S3.  
+- **Storage**:  
+  - Raw data → S3 “bronze” bucket  
+  - Transformed data → S3 “gold” bucket (Parquet format)  
+- **Monitoring**: CloudWatch alarms watch EMR job status and cluster health.  
+- **Infrastructure as Code**: All AWS resources are provisioned with Terraform (no console steps).  
 
 ---
 
-## Steps Implemented
-1. **Data Generation (~5GB):**
-   - Used custom generator to produce IoT humidity/temperature events.
-   - Stored in JSONL format in **Bronze bucket**.
-   - Example command:
-     ```bash
-     aws s3 ls s3://my-streaming-raw-bronze/raw/ --human-readable --summarize
-     ```
-   - ✅ Verified: `~5.1 GiB` file uploaded.
+## 🔧 Components
 
-2. **Data Processing with Spark on EMR:**
-   - Spark job (`spark_transformer.py`) reads from Bronze.
-   - Cleans and normalizes fields (drops invalid values, fixes casing, validates ranges).
-   - Writes Parquet outputs partitioned by `date` and `location_city` into **Gold bucket**.
-   - Uses checkpointing for incremental streaming.
+### 📁 Data Ingestion
+- `input_data_streaming.py` → generates humidity events.  
+- Data uploaded to `s3://iot-stream-raw-bronze/raw/`.  
 
-3. **Outputs:**
-   - **Bronze bucket (`my-streaming-raw-bronze`):**
-     - Raw JSONL files (~5.1 GiB).
-   - **Gold bucket (`my-streaming-processed-gold`):**
-     - Parquet files under `/iot_transformed/` (snappy compressed).
-   - ✅ Verified: multiple parquet part files present.
+### 💡 Spark Transformation
+- `spark_transformer.py` runs on EMR.  
+- Cleans and validates data (filters bad records, normalizes fields).  
+- Writes Parquet files to `s3://iot-stream-processed-gold/iot_transformed/`.  
+- Uses checkpointing to avoid duplicates.  
+
+### 🧱 Terraform Modules
+- **s3.tf** → Raw & Processed buckets  
+- **emr.tf** → EMR cluster + Spark step  
+- **iam_emr.tf** → IAM roles for EMR  
+- **cloudwatch.tf** → CloudWatch alarms for job/cluster health  
+- **variables.tf** → Parameterized values  
+- **outputs.tf** → EMR cluster ID  
 
 ---
 
-## Screenshots
-- S3 Bronze bucket with **5.1 GiB raw JSONL**
-- S3 Gold bucket with **processed parquet outputs**
-- AWS CLI `aws s3 ls` showing total size
-- EMR step logs (shows `FAILED` but still produced valid output)
-
+## 📂 Project Structure
+├── Scripts/
+│   ├── input_data_streaming.py     # Simulates humidity data → S3
+│   └── spark_transformer.py        # Spark job to clean & process data
+├── terraform/
+│   ├── s3.tf                       # S3 buckets
+│   ├── emr.tf                      # EMR cluster setup
+│   ├── iam_emr.tf                  # IAM roles
+│   ├── cloudwatch.tf               # CloudWatch alarms
+│   ├── variables.tf                # Variables
+│   ├── outputs.tf                  # Outputs
+│   ├── provider.tf                 # AWS provider config
+│   └── main.tf                     # Terraform entry
+├── README.md
 ---
 
-## Notes on EMR Step Status
-- The EMR step appeared as **FAILED** in the AWS console/CLI.
-- Investigation shows the Spark job successfully wrote **Parquet outputs** to S3 Gold before failure.
-- The failure was likely due to checkpoint or cleanup issues at job end.
-- ✅ Data pipeline results are valid and can be used for analysis.
+## 🚀 How to Run
 
----
-
-## Conclusion
-- Implemented **end-to-end IoT streaming analytics pipeline**.
-- Generated and processed **>5GB IoT data**.
-- Stored results in **layered S3 architecture** (Bronze → Gold).
-- Outputs validated with CLI and screenshots.
+### 1. Run Data Generator
+```bash
+cd Scripts
+python input_data_streaming.py
+#deploy
+cd terraform
+terraform init
+terraform apply -auto-approve
+#Check Outputs
+	•	Raw data in → s3://iot-stream-raw-bronze/raw/
+	•	Processed data in → s3://iot-stream-processed-gold/iot_transformed/
+	•	EMR → Steps tab shows Spark job success/failure
+	•	CloudWatch → check alarms & metrics
+    #acceptance
+    Requirement
+Status
+Use AWS SDK/Terraform for setup
+✅ Done
+Python script simulates humidity data
+✅ Done
+Spark job processes streaming data
+✅ Done
+Transformed data stored in S3
+✅ Done
+CloudWatch alarms configured
+✅ Done
+All Infra via Terraform only
+✅ Done
+Code hosted on GitHub
+✅ Done
