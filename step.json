@@ -1,0 +1,14 @@
+[
+  {
+    "Name": "Humidity-Transform",
+    "ActionOnFailure": "CONTINUE",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "spark-submit",
+      "s3://my-streaming-raw-bronze/code/spark_transformer.py",
+      "--input", "s3://my-streaming-raw-bronze/raw/",
+      "--output", "s3://my-streaming-processed-gold/iot_transformed/",
+      "--checkpoint", "s3://my-streaming-processed-gold/checkpoint/"
+    ]
+  }
+]
